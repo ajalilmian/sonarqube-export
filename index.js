@@ -1,4 +1,4 @@
-const { Command } = require('commander');
+const { Command, Option } = require('commander');
 const Axios = require('axios');
 const FormData = require('form-data');
 const cliProgress = require('cli-progress');
@@ -36,11 +36,16 @@ async function fetchAllAuthors() {
   return data.authors;
 }
 
-async function fetchBugsCount(author, projects = []) {
+async function fetchIssuesCount(
+  issueType,
+  author,
+  projects = [],
+  severities = []
+) {
   const { data } = await axios.get(
-    `/issues/search?types=BUG&author=${author}&componentKeys=${projects.join(
+    `/issues/search?types=${issueType}&author=${author}&componentKeys=${projects.join(
       ','
-    )}`
+    )}&severities=${severities.join(',')}`
   );
   return [author, data.total];
 }
@@ -61,8 +66,14 @@ program
 program
   .command('bugs')
   .description('Export a CSV file that lists count of bugs by authors')
-  .option('--project <projects...>', 'only list bugs for specified project')
-  .option('--author <authors...>', 'only show specified authors')
+  .option('-p, --project <projects...>', 'only list bugs for specified project')
+  .option('-a, --author <authors...>', 'only show specified authors')
+  .addOption(
+    new Option(
+      '-s, --severity <severities...>',
+      'only list bugs of specified severity'
+    ).choices(['INFO', 'MINOR', 'MAJOR', 'CRITICAL', 'BLOCKER'])
+  )
   .option('-f, --filename <name>', 'name of CSV file', 'bugs.csv')
   .action(async (options) => {
     await authenticate();
@@ -76,7 +87,46 @@ program
     progressBar.start(authors.length, 0);
     const authorsPromise = authors.map((author) => {
       progressBar.increment();
-      return fetchBugsCount(author, options.project);
+      return fetchIssuesCount('BUG', author, options.project, options.severity);
+    });
+    const data = await Promise.all(authorsPromise);
+    progressBar.stop();
+    writeCsv(data, options.filename);
+  });
+
+program
+  .command('smells')
+  .description('Export a CSV file that lists count of code-smells by authors')
+  .option(
+    '-p, --project <projects...>',
+    'only list code-smells for specified project'
+  )
+  .option('-a, --author <authors...>', 'only show specified authors')
+  .addOption(
+    new Option(
+      '-s, --severity <severities...>',
+      'only list code-smells of specified severity'
+    ).choices(['INFO', 'MINOR', 'MAJOR', 'CRITICAL', 'BLOCKER'])
+  )
+  .option('-f, --filename <name>', 'name of CSV file', 'smells.csv')
+  .action(async (options) => {
+    await authenticate();
+    let authors;
+    if (options.author) {
+      authors = options.author;
+    } else {
+      authors = await fetchAllAuthors();
+    }
+    const progressBar = createProgressBar();
+    progressBar.start(authors.length, 0);
+    const authorsPromise = authors.map((author) => {
+      progressBar.increment();
+      return fetchIssuesCount(
+        'CODE_SMELL',
+        author,
+        options.project,
+        options.severity
+      );
     });
     const data = await Promise.all(authorsPromise);
     progressBar.stop();
