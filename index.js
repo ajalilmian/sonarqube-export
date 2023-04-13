@@ -1,11 +1,10 @@
 const { Command } = require('commander');
 const Axios = require('axios');
+const FormData = require('form-data');
 const cliProgress = require('cli-progress');
 const Papa = require('papaparse');
 const fs = require('fs');
 require('dotenv').config();
-
-const program = new Command();
 
 const axios = Axios.create({
   baseURL: process.env.SONARQUBE_URL,
@@ -49,8 +48,10 @@ async function fetchBugsCount(author, projects = []) {
 function writeCsv(data, filename) {
   const output = Papa.unparse(data);
   fs.writeFileSync(filename, output);
-  console.log(`Data exported to ${__dirname}/${filename}`);
+  console.log(`Data exported to ${filename}`);
 }
+
+const program = new Command();
 
 program
   .name('sonarqube-export')
@@ -65,25 +66,21 @@ program
   .option('-f, --filename <name>', 'name of CSV file', 'bugs.csv')
   .action(async (options) => {
     await authenticate();
-
     let authors;
     if (options.author) {
       authors = options.author;
     } else {
       authors = await fetchAllAuthors();
     }
-
     const progressBar = createProgressBar();
     progressBar.start(authors.length, 0);
-
-    const authorMap = authors.map((author) => {
+    const authorsPromise = authors.map((author) => {
       progressBar.increment();
       return fetchBugsCount(author, options.project);
     });
-
-    const data = await Promise.all(authorMap);
+    const data = await Promise.all(authorsPromise);
     progressBar.stop();
-    writeCsv(data, options.filename || 'bugs.csv');
+    writeCsv(data, options.filename);
   });
 
 program.parse();
