@@ -46,6 +46,7 @@ This will create a file `bugs.csv` in the current directory. To specify a custom
 -a, --author <authors...>       only show specified authors
 -s, --severity <severities...>  only list bugs of specified severity (choices: "INFO", "MINOR", "MAJOR", "CRITICAL", "BLOCKER")
 -f, --filename <name>           name of CSV file (default: "bugs.csv")
+--no-merge                      disable merging of matching records
 -h, --help                      display help for command
 ```
 
@@ -66,6 +67,7 @@ This will create a file `smells.csv` in the current directory. To specify a cust
 -a, --author <authors...>       only show specified authors
 -s, --severity <severities...>  only list code-smells of specified severity (choices: "INFO", "MINOR", "MAJOR", "CRITICAL", "BLOCKER")
 -f, --filename <name>           name of CSV file (default: "smells.csv")
+--no-merge                      disable merging of matching records
 -h, --help                      display help for command
 ```
 
@@ -87,6 +89,7 @@ Options:
   -a, --author <authors...>       only show specified authors
   -s, --severity <severities...>  only list bugs of specified severity (choices: "INFO", "MINOR", "MAJOR", "CRITICAL", "BLOCKER")
   -f, --filename <name>           name of CSV file (default: "bugs.csv")
+  --no-merge                      disable merging of matching records
   -h, --help                      display help for command
 ```
 

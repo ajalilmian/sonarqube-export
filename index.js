@@ -19,6 +19,27 @@ function createProgressBar() {
   );
 }
 
+function createUsername(name) {
+  let ind = name.indexOf('@');
+  return name
+    .substr(0, ind < 0 ? name.length : ind)
+    .split(/[\.\_\-]/)
+    .join(' ');
+}
+
+function mergeMatching(data) {
+  return data.reduce((acc, [name, email, count]) => {
+    const index = acc.findIndex(([n]) => n === name);
+    if (index !== -1) {
+      acc[index][1] += ',' + email;
+      acc[index][2] += count;
+    } else {
+      acc.push([name, email, count]);
+    }
+    return acc;
+  }, []);
+}
+
 async function authenticate() {
   console.log('Authenticating with SonarQube');
   const formData = new FormData();
@@ -47,7 +68,7 @@ async function fetchIssuesCount(
       ','
     )}&severities=${severities.join(',')}`
   );
-  return [author, data.total];
+  return [createUsername(author), author, data.total];
 }
 
 function writeCsv(data, filename) {
@@ -75,6 +96,7 @@ program
     ).choices(['INFO', 'MINOR', 'MAJOR', 'CRITICAL', 'BLOCKER'])
   )
   .option('-f, --filename <name>', 'name of CSV file', 'bugs.csv')
+  .option('--no-merge', 'disable merging of matching records')
   .action(async (options) => {
     await authenticate();
     let authors;
@@ -89,8 +111,11 @@ program
       progressBar.increment();
       return fetchIssuesCount('BUG', author, options.project, options.severity);
     });
-    const data = await Promise.all(authorsPromise);
+    let data = await Promise.all(authorsPromise);
     progressBar.stop();
+    if(options.merge) {
+      data = mergeMatching(data);
+    }
     writeCsv(data, options.filename);
   });
 
@@ -109,6 +134,7 @@ program
     ).choices(['INFO', 'MINOR', 'MAJOR', 'CRITICAL', 'BLOCKER'])
   )
   .option('-f, --filename <name>', 'name of CSV file', 'smells.csv')
+  .option('--no-merge', 'disable merging of matching records')
   .action(async (options) => {
     await authenticate();
     let authors;
@@ -128,8 +154,11 @@ program
         options.severity
       );
     });
-    const data = await Promise.all(authorsPromise);
+    let data = await Promise.all(authorsPromise);
     progressBar.stop();
+    if(options.merge) {
+      data = mergeMatching(data);
+    }
     writeCsv(data, options.filename);
   });
 
